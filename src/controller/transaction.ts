@@ -65,6 +65,43 @@ export async function initializeTransaction(req: Request, res: Response) {
 
 
 
+export async function completePayment(req: Request, res: Response) {
+  try {
+    const { reference } = req.params;
+
+    const result = await pool.query(
+      `UPDATE transactions
+       SET status = 'success',
+           updated_at = NOW()
+       WHERE reference = $1
+       AND status = 'pending'
+       RETURNING reference, amount_cents, email, status`,
+      [reference]
+    );
+
+    const transaction = result.rows[0];
+
+    if (!transaction) {
+      return res.status(404).json({
+        message: "Transaction not found or already completed",
+      });
+    }
+
+    return res.status(200).json({
+      message: "Payment completed successfully",
+      data: transaction,
+    });
+  } catch (error) {
+    console.error("Complete payment error:", error);
+
+    return res.status(500).json({
+      message: "Internal server error",
+    });
+  }
+}
+
+
+
 
 export async function verifyTransaction(req: Request, res: Response) {
   try {
